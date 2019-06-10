@@ -30,6 +30,9 @@ http.createServer((req, res) => {
   });
   if (req.method === 'GET' && url.parse(req.url, true).pathname === config.path) {
     const target = getTarget(req);
+    if (target.ip.startsWith("::ffff:")) {
+      target.ip = target.ip.substring("::ffff:".length);
+    }
     alidns.updateRecord(target, (msg) => {
       if (msg === 'error') {
         res.statusCode = 400;
