@@ -1,6 +1,7 @@
 'use strict';
 const http = require('http');
 const url = require('url');
+const net = require("net");
 const alidns = require('./alidns.js');
 const config = require('./config.json');
 
@@ -18,8 +19,15 @@ const getTarget = req => {
   };
 };
 
+let watingQueue = [];
+
+let httpServerStatus = 0;
+setInterval(ActivateHttpServer, 500);
+
+let curtSocket = null;
+
 // 服务器端监听
-http.createServer((req, res) => {
+let httpServer = http.createServer((req, res) => {
   req.on('error', err => {
     console.error(err);
     res.statusCode = 400;
@@ -27,6 +35,10 @@ http.createServer((req, res) => {
   });
   res.on('error', err => {
     console.error(err);
+  });
+  res.on("finish", function () {
+    curtSocket = null;
+    setTimeout(dealRequest, 300);
   });
   if (req.method === 'GET' && url.parse(req.url, true).pathname === config.path) {
     const target = getTarget(req);
@@ -44,4 +56,30 @@ http.createServer((req, res) => {
     res.statusCode = 404;
     res.end();
   }
+});
+
+net.createServer(function (socket) {
+  enqueueSocket(socket);
 }).listen(config.port);
+
+function enqueueSocket(socket) {
+  watingQueue.push(socket);
+}
+
+function dealRequest() {
+  if (watingQueue.length <= 0 && curtSocket == null) {
+    httpServerStatus = 0;
+    return;
+  }
+
+  httpServerStatus = 1;
+
+  curtSocket = watingQueue.shift();
+  httpServer.emit("connection", curtSocket);
+}
+
+function ActivateHttpServer() {
+  if (httpServerStatus == 0) {
+    dealRequest();
+  }
+}

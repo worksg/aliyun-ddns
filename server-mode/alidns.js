@@ -127,15 +127,21 @@ const updateRecord = (target, callback) => {
         // 获取要更新的域名的 RecordId, 并检查是否需要更新
         let shouldUpdate = false;
         let shouldAdd = true;
-        result.DomainRecords.Record
-          .filter(record => record.RR === updateParmas.RR)
-          .forEach(record => {
-            shouldAdd = false;
-            if (record.Value !== updateParmas.Value) {
-              shouldUpdate = true;
-              updateParmas.RecordId = record.RecordId;
-            }
-          });
+        if (typeof result.DomainRecords !== 'undefined') {
+          result.DomainRecords.Record
+            .filter(record => record.RR === updateParmas.RR)
+            .forEach(record => {
+              shouldAdd = false;
+              if (record.Value !== updateParmas.Value) {
+                shouldUpdate = true;
+                updateParmas.RecordId = record.RecordId;
+              }
+            });
+        } else {
+          console.log(new Date() + ': [' + subDomain + '] ' + " result =>", result);
+          callback('error');
+          return;
+        }
         if (shouldUpdate) {
           // 更新域名的解析
           http.request({
